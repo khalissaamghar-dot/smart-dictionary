@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mots sans images</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #0f172a; color: white; }
+        .container { max-width: 800px; margin: 0 auto; background: #1e293b; padding: 30px; border-radius: 20px; border: 1px solid #334155; }
+        h1 { color: #38bdf8; margin-top: 0; }
+        ul { list-style: none; padding: 0; }
+        li { padding: 12px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        .badge { background: #ef4444; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+        button { background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        #results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Liste des mots sans image</h1>
+        <p>Analyse de la collection <code>words</code> pour trouver les images manquantes ou génériques.</p>
+        <button id="checkBtn">Analyser la base de données</button>
+        <div id="results">Cliquer sur le bouton pour lancer l'analyse...</div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs } from "./js/firebase-config.js";
+
+        document.getElementById('checkBtn').onclick = async () => {
+            const results = document.getElementById('results');
+            results.innerHTML = "⏳ Analyse en cours...";
+            
+            try {
+                const snapshot = await getDocs(collection(db, "words"));
+                let missing = [];
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const frWord = data.translations?.fr?.word || data.translations?.en?.word || "Inconnu";
+                    
+                    // On considère une image comme manquante si :
+                    // 1. Elle est vide
+                    // 2. Elle contient "picsum.photos" (image générique)
+                    const isMissing = !data.imageUrl || data.imageUrl.includes("picsum.photos");
+                    
+                    if (isMissing) {
+                        missing.push(frWord);
+                    }
+                });
+
+                if (missing.length === 0) {
+                    results.innerHTML = "<p style='color:#10b981;'>✨ Félicitations ! Tous les mots ont une image personnalisée.</p>";
+                } else {
+                    results.innerHTML = `<p>Il manque des images pour <b>${missing.length}</b> mots :</p>
+                        <ul>${missing.map(m => `<li><span>${m}</span> <span class="badge">IMAGE MANQUANTE</span></li>`).join('')}</ul>`;
+                }
+            } catch (e) {
+                results.innerHTML = "❌ Erreur : " + e.message;
+            }
+        };
+    </script>
+</body>
+</html>

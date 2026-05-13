@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Réparation des Médias</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #0f172a; color: white; text-align: center; }
+        .card { background: #1e293b; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: inline-block; max-width: 600px; width: 100%; }
+        button { background: #f59e0b; color: white; border: none; padding: 15px 30px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1.1rem; }
+        #log { margin-top: 30px; text-align: left; background: #000; color: #4ade80; padding: 20px; border-radius: 10px; min-height: 200px; white-space: pre-wrap; font-family: monospace; font-size: 0.9rem; border: 1px solid #334155; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🛠 Réparation "Fusion" & "Génome"</h1>
+        <p>Ce script force l'ajout de la vidéo pour la <b>Fusion</b> et de l'image pour le <b>Génome</b>, même si les mots existent déjà.</p>
+        <button id="repairBtn">Forcer la Mise à Jour</button>
+        <div id="log">Prêt...</div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, updateDoc, doc } from "./js/firebase-config.js";
+
+        const REPAIR_MAP = [
+            { search: 'fusion', url: 'img/fusion-nucleaire.mp4' },
+            { search: 'genome', url: 'img/genome.jfif' },
+            { search: 'génome', url: 'img/genome.jfif' },
+            { search: 'genetics', url: 'img/genome.jfif' }
+        ];
+
+        document.getElementById('repairBtn').onclick = async () => {
+            const logDiv = document.getElementById('log');
+            logDiv.textContent = "⏳ Recherche en cours...\n";
+            
+            try {
+                const snapshot = await getDocs(collection(db, "words"));
+                let updatedCount = 0;
+
+                for (const d of snapshot.docs) {
+                    const data = d.data();
+                    const allText = JSON.stringify(data.translations).toLowerCase();
+                    
+                    let matched = false;
+                    for (const item of REPAIR_MAP) {
+                        if (allText.includes(item.search)) {
+                            await updateDoc(doc(db, "words", d.id), { imageUrl: item.url });
+                            logDiv.textContent += `✅ Mis à jour : "${data.translations.en?.word || data.translations.fr?.word}" -> ${item.url}\n`;
+                            updatedCount++;
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (updatedCount === 0) {
+                    logDiv.textContent += "ℹ️ Aucun mot correspondant trouvé dans la base de données. Avez-vous déjà lancé 'Add Unique Terms' ?\n";
+                } else {
+                    logDiv.textContent += `\n✨ Terminé ! ${updatedCount} mots réparés.`;
+                }
+            } catch (err) {
+                logDiv.textContent += "\n❌ Erreur : " + err.message;
+            }
+        };
+    </script>
+</body>
+</html>

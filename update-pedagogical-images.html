@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Standards Géo-Sciences (V15)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; margin: 0; color: white; padding: 20px; }
+        .card { background: #1e293b; padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: center; width: 100%; max-width: 900px; border: 1px solid #334155; }
+        h1 { font-size: 1.8rem; margin-bottom: 5px; color: #38bdf8; }
+        .project-id { font-size: 0.9rem; color: #fbbf24; margin-bottom: 20px; background: #0f172a; padding: 8px 15px; border-radius: 8px; border: 1px solid #fbbf24; display: inline-block; }
+        p { color: #94a3b8; line-height: 1.6; margin-bottom: 30px; }
+        button { background: #3b82f6; color: white; border: none; padding: 16px 32px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: all 0.3s; }
+        button:hover { background: #2563eb; transform: translateY(-2px); }
+        #status { margin-top: 25px; font-family: monospace; font-size: 0.82rem; color: #38bdf8; background: #0f172a; padding: 15px; border-radius: 8px; text-align: left; height: 350px; overflow-y: auto; border: 1px solid #1e293b; line-height: 1.5; }
+        .log-ok { color: #10b981; }
+        .log-info { color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🌍 Standards Géo-Sciences (V15)</h1>
+        <div id="projectIdDisplay" class="project-id">Connexion...</div>
+        <p>Ajout des nouveaux visuels : Montagne, Rivière, Désert, Forêt, Volcan, Séisme, Cycle de l'eau.</p>
+        <button id="updateBtn">Mettre à jour vers V15</button>
+        <div id="status">Prêt...</div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, updateDoc, doc } from "./js/firebase-config.js";
+
+        const config = db.app.options;
+        document.getElementById('projectIdDisplay').textContent = "PROJET : " + config.projectId;
+
+        const MAPPING = {
+            // --- NOUVEAUX TERMES GÉO-SCIENCES ---
+            'montagne': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200',
+            'mountain': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200',
+            'rivière': 'https://images.unsplash.com/photo-1437482012496-138283f9403a?q=80&w=1200',
+            'river': 'https://images.unsplash.com/photo-1437482012496-138283f9403a?q=80&w=1200',
+            'désert': 'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?q=80&w=1200',
+            'desert': 'https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?q=80&w=1200',
+            'forêt': 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200',
+            'forest': 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200',
+            'volcan': 'https://images.unsplash.com/photo-1518457607834-6e8d80c183c5?q=80&w=1200',
+            'volcano': 'https://images.unsplash.com/photo-1518457607834-6e8d80c183c5?q=80&w=1200',
+            'tremblement de terre': 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3h2Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3AmZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PWc/3o7TKMGfN56A0d3r20/giphy.gif', // Animation séisme
+            'earthquake': 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3h2Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3AmZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PWc/3o7TKMGfN56A0d3r20/giphy.gif',
+            'cycle de l’eau': 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3h2Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3AmZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PWc/3o7TKvWf3vW3m7V3Vq/giphy.gif', // Animation cycle eau
+            'water cycle': 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3h2Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3AmZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PWc/3o7TKvWf3vW3m7V3Vq/giphy.gif',
+
+            // --- RAPPEL DES STANDARDS PRÉCÉDENTS ---
+            'cellule': 'https://images.unsplash.com/photo-1579154273821-ad99edf5ad89?q=80&w=1200',
+            'adn': 'https://images.unsplash.com/photo-1576086213369-97a306d36557?q=80&w=1200',
+            'cœur': 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3h2Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3AmZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PWc/3o7TKVUn7iM8FMEU24/giphy.gif',
+            'respiration': 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3h2Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3h3Z3AmZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PWc/3o7TKVUn7iM8FMEU24/giphy.gif',
+            'photosynthèse': 'img/photoSynthese.gif'
+        };
+
+        const log = (msg, type='info') => {
+            const entry = document.createElement('div');
+            entry.className = 'log-' + type;
+            entry.innerHTML = msg;
+            const status = document.getElementById('status');
+            status.appendChild(entry);
+            status.scrollTop = status.scrollHeight;
+        };
+
+        document.getElementById('updateBtn').onclick = async () => {
+            const btn = document.getElementById('updateBtn');
+            btn.disabled = true;
+            log("📡 Mise à jour vers Standards V15...");
+            
+            try {
+                const snapshot = await getDocs(collection(db, "words"));
+                let count = 0;
+                const t = Date.now();
+
+                for (const d of snapshot.docs) {
+                    const data = d.data();
+                    const enWord = (data.translations?.en?.word || "").toLowerCase().trim();
+                    const frWord = (data.translations?.fr?.word || "").toLowerCase().trim();
+                    
+                    const newImg = MAPPING[enWord] || MAPPING[frWord];
+                    
+                    if (newImg) {
+                        const finalUrl = newImg.includes('?') ? `${newImg}&t=${t}` : `${newImg}?t=${t}`;
+                        await updateDoc(doc(db, "words", d.id), { imageUrl: finalUrl });
+                        count++;
+                        log(`✅ Mise à jour : <b>${frWord || enWord}</b>`, "ok");
+                    }
+                }
+                log(`<br><b>Fini ! ${count} nouveaux visuels géo-sciences appliqués.</b>`, "ok");
+            } catch (e) {
+                log(`❌ ERREUR : ${e.message}`, "err");
+            } finally {
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>

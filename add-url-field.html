@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ajout du champ URL</title>
+    <style>
+        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f8fafc; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; max-width: 500px; border: 1px solid #e2e8f0; }
+        button { background: #10b981; color: white; border: none; padding: 15px 30px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: all 0.2s; }
+        button:hover { background: #059669; transform: translateY(-2px); }
+        #status { margin-top: 20px; font-size: 0.9rem; color: #64748b; min-height: 50px; }
+        .success { color: #10b981; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔗 Ajout du champ URL</h1>
+        <p>Ce script va ajouter un champ <code>url</code> à tous les mots de votre collection Firebase qui ne le possèdent pas encore.</p>
+        <button id="updateBtn">Lancer la mise à jour globale</button>
+        <div id="status">Prêt à commencer...</div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, updateDoc, doc } from "./js/firebase-config.js";
+
+        document.getElementById('updateBtn').onclick = async () => {
+            const status = document.getElementById('status');
+            const btn = document.getElementById('updateBtn');
+            btn.disabled = true;
+            status.innerHTML = "⏳ Analyse de la base de données en cours...";
+            
+            try {
+                const snapshot = await getDocs(collection(db, "words"));
+                let count = 0;
+                let total = snapshot.docs.length;
+
+                for (let i = 0; i < total; i++) {
+                    const d = snapshot.docs[i];
+                    const data = d.data();
+                    
+                    // Si le champ url n'existe pas, on l'ajoute
+                    if (data.url === undefined) {
+                        await updateDoc(doc(db, "words", d.id), {
+                            url: ""
+                        });
+                        count++;
+                    }
+                    status.innerHTML = `⏳ Progression : ${i + 1}/${total} mots analysés...`;
+                }
+
+                status.innerHTML = `<span class="success">✅ Terminé !</span><br>${count} mots ont été mis à jour avec le nouveau champ URL.<br>${total - count} mots possédaient déjà le champ.`;
+            } catch (e) {
+                status.innerHTML = "❌ Erreur : " + e.message;
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>

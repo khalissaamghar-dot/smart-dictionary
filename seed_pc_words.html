@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ajout 10 Mots PC</title>
+    <style>
+        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #0f172a; margin: 0; color: white; }
+        .card { background: #1e293b; padding: 40px; border-radius: 20px; text-align: center; max-width: 500px; border: 1px solid #334155; }
+        button { background: #3b82f6; color: white; border: none; padding: 15px 30px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        #status { margin-top: 20px; font-family: monospace; color: #38bdf8; text-align: left; max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>⚛️ Ajout de 10 mots PC</h1>
+        <p>Ce script va ajouter 10 concepts de Physique-Chimie à votre base de données.</p>
+        <button id="addBtn">Lancer l'injection</button>
+        <div id="status">En attente...</div>
+    </div>
+
+    <script type="module">
+        import { db, collection, addDoc } from "./js/firebase-config.js";
+
+        const pcWords = [
+            {
+                category: 'physics',
+                imageUrl: 'https://images.unsplash.com/photo-1517420704952-d9f39e95b43e?q=80&w=800', // Circuit
+                translations: {
+                    fr: { word: "Loi d'Ohm", definition: "Relation entre la tension, le courant et la résistance dans un circuit électrique (U = R x I)." },
+                    en: { word: "Ohm's Law", definition: "A law stating that electric current is proportional to voltage and inversely proportional to resistance." },
+                    ar: { word: "قانون أوم", definition: "العلاقة بين الجهد الكهربائي والتيار والمقاومة في دائرة كهربائية." },
+                    zgh: { word: "ⴰⵣⵔⴼ ⵏ ⵓⵀⵎ", definition: "ⵜⴰⵣⴷⴰⵢⵜ ⴳⵔ ⵓⴳⴳⵓⴳ, ⴰⵎⵣⵉⵣⵣⵍ ⴷ ⵜⵏⵣⵣⵉⵜ ⴳ ⵓⵙⴷⴷⵉ ⴰⵍⵉⴽⵜⵔⵉⴽ." }
+                },
+                status: 'approved'
+            },
+            {
+                category: 'chemistry',
+                imageUrl: 'https://images.unsplash.com/photo-1532634896-26909d0d4b89?q=80&w=800', // Atoms
+                translations: {
+                    fr: { word: "Liaison ionique", definition: "Type de liaison chimique où un atome donne un électron à un autre, créant une attraction entre ions." },
+                    en: { word: "Ionic Bond", definition: "A chemical bond formed through the electrostatic attraction between oppositely charged ions." },
+                    ar: { word: "رابطة أيونية", definition: "رابطة كيميائية تنشأ عن تجاذب ذرات مشحونة كهربائياً." },
+                    zgh: { word: "ⵜⵓⵇⵇⵏⴰ ⵜⴰⵢⵓⵏⵉⵜ", definition: "ⴰⵏⴰⵡ ⵏ ⵜⵓⵇⵇⵏⴰ ⵜⴰⴽⵉⵎⵉⵜ ⴳ ⵜⴼⵔⴽⴰ ⵜⴼⴽⴰ ⵢⴰⵏ ⵓⵍⵉⴽⵜⵔⵓⵏ ⵉ ⵜⴼⵔⴽⴰ ⵢⴰⴹⵏ." }
+                },
+                status: 'approved'
+            },
+            {
+                category: 'physics',
+                imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=800', // Heat/Nature
+                translations: {
+                    fr: { word: "Convection", definition: "Transfert de chaleur par le mouvement d'un fluide (air ou eau) qui monte quand il chauffe." },
+                    en: { word: "Convection", definition: "Heat transfer by the movement of a fluid such as air or water." },
+                    ar: { word: "الحمل الحراري", definition: "انتقال الحرارة عبر حركة السوائل أو الغازات." },
+                    zgh: { word: "ⴰⵙⵙⵓⴷⴷⵓ ⴰⵎⵔⵖⴰⵏ", definition: "ⴰⵙⵙⵉⴼⴹ ⵏ ⵜⵔⵖⵉ ⵙ ⵓⵎⵓⵙⵙⵓ ⵏ ⵓⴳⴰⵎ (ⴰⴹⵓ ⵏⵖ ⴰⵎⴰⵏ)." }
+                },
+                status: 'approved'
+            },
+            {
+                category: 'chemistry',
+                imageUrl: 'https://images.unsplash.com/photo-1579154273821-ad99edf5ad89?q=80&w=800', // Science
+                translations: {
+                    fr: { word: "Isotope", definition: "Atome d'un même élément qui a le même nombre de protons mais un nombre différent de neutrons." },
+                    en: { word: "Isotope", definition: "Atoms of the same element that have different numbers of neutrons." },
+                    ar: { word: "نظير", definition: "ذرات لنفس العنصر تختلف في عدد النيوترونات." },
+                    zgh: { word: "ⴰⵎⵢⵉⵔⵉⵡ", definition: "ⵜⴰⴼⵔⴽⴰ ⵏ ⵢⴰⵏ ⵓⴼⵔⴷⵉⵙ ⵍⵍⵉ ⴷⴰⵔ ⵢⴰⵏ ⵓⵎⴹⴰⵏ ⵏ ⵉⴱⵔⵓⵜⵓⵏⵏ ⵎⴰⵛⴰ ⵓⵔ ⵎⵢⴰⵡⴰⵙⵏ ⴳ ⵉⵏⵓⵜⵔⵓⵏⵏ." }
+                },
+                status: 'approved'
+            },
+            {
+                category: 'physics',
+                imageUrl: 'https://images.unsplash.com/photo-1517420704952-d9f39e95b43e?q=80&w=800', // Electronics
+                translations: {
+                    fr: { word: "Condensateur", definition: "Composant électronique capable de stocker de l'énergie électrique sous forme de charges." },
+                    en: { word: "Capacitor", definition: "A device used to store electrical charge, consisting of two conductors separated by an insulator." },
+                    ar: { word: "مكثف", definition: "مكون إلكتروني يقوم بتخزين الطاقة الكهربائية." },
+                    zgh: { word: "ⴰⵎⵙⴼⵙⵓ", definition: "ⴰⴼⵔⴷⵉⵙ ⴰⵍⵉⴽⵜⵔⵓⵏⵉⴽ ⵍⵍⵉ ⵢⵉⵥⴹⵉⵔⵏ ⴰⴷ ⵢⴰⵎⵥ ⵜⴰⵥⴹⴰⵔⵜ ⵜⴰⵍⵉⴽⵜⵔⵉⵜ." }
+                },
+                status: 'approved'
+            },
+            {
+                category: 'physics',
+                imageUrl: 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?q=80&w=800', // Energy
+                translations: {
+                    fr: { word: "Effet Joule", definition: "Dégagement de chaleur produit par le passage d'un courant électrique dans un matériau résistant." },
+                    en: { word: "Joule Effect", definition: "The process by which the passage of an electric current through a conductor produces heat." },
+                    ar: { word: "أثر جول", definition: "الحرارة الناتجة عن مرور تيار كهربائي في موصل." },
+                    zgh: { word: "ⵜⵉⴼⵉⵢⵜ ⵏ ⵊⵓⵍ", definition: "ⴰⴼⵓⵖ ⵏ ⵜⵔⵖⵉ ⵍⵍⵉ ⴷ ⵉⵜⵜⴼⴼⵓⵖⵏ ⴳ ⵓⵣⵔⵉ ⵏ ⵓⵎⵣⵉⵣⵣⵍ ⴰⵍⵉⴽⵜⵔⵉⴽ." }
+                },
+                status: 'approved'
+            },
+            {
+                category: 'physics',
+                imageUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800', // Honey/Fluid
+                translations: {
+                    fr: { word: "Viscosité", definition: "Résistance d'un fluide à l'écoulement (exemple : le miel est plus visqueux que l'eau)." },
+                    en: { word: "Viscosity", definition: "The state of being thick, sticky, and semi-fluid in consistency, due to internal friction." },
+                    ar: { word: "لزوجة", definition: "مقاومة السائل للتدفق أو الجريان." },
+                    zgh: { word: "ⵜⵓⵛⵛⵓⵍⵜ", definition: "ⴰⵎⵣⴰⵖ ⵏ ⵓⴳⴰⵎ ⵎⴳⴰⵍ ⴰⵣⵔⵉ (ⴰⵎⴷⵢⴰ : ⵜⴰⵎⵎⵏⵜ ⵜⵓⵛⵛⵍ ⵓⴳⴳⴰⵔ ⵏ ⵓⵎⴰⵏ)." }
+                },
+                status: 'approved'
+            },
+            {
+                category: 'chemistry',
+                imageUrl: 'https://images.unsplash.com/photo-1534991715367-0c33403b38c3?q=80&w=800', // Lab
+                translations: {
+                    fr: { word: "Électrolyse", definition: "Réaction chimique provoquée par un courant électrique pour décomposer une substance." },
+                    en: { word: "Electrolysis", definition: "Chemical decomposition produced by passing an electric current through a liquid or solution." },
+                    ar: { word: "تحليل كهربائي", definition: "تفكيك المواد الكيميائية باستخدام التيار الكهربائي." },
+                    zgh: { word: "ⴰⴼⵙⴰⵢ ⴰⵍⵉⴽⵜⵔⵉⴽ", definition: "ⵜⴰⵢⴰⴼⵓⵜ ⵜⴰⴽⵉⵎⵉⵜ ⵍⵍⵉ ⴷ ⵉⵜⵜⴼⴼⵓⵖⵏ ⴳ ⵓⵎⵣⵉⵣⵣⵍ ⴰⵍⵉⴽⵜⵔⵉⴽ." }
+                },
+                status: 'approved'
+            },
+            {
+                category: 'chemistry',
+                imageUrl: 'https://images.unsplash.com/photo-1534991715367-0c33403b38c3?q=80&w=800', // Dry ice
+                translations: {
+                    fr: { word: "Sublimation", definition: "Passage direct d'un corps de l'état solide à l'état gazeux sans passer par l'état liquide." },
+                    en: { word: "Sublimation", definition: "The transition of a substance directly from the solid to the gas state." },
+                    ar: { word: "تسامي", definition: "تحول المادة من الحالة الصلبة إلى الحالة الغازية مباشرة." },
+                    zgh: { word: "ⴰⵙⴼⵙⴻⵢ", definition: "ⴰⵣⵔⵉ ⴰⵎⴷⴰⵙ ⵏ ⵓⴼⵔⴷⵉⵙ ⴳ ⵓⵥⵔⵓ ⵖⵔ ⵓⴳⴰⵣ." }
+                },
+                status: 'approved'
+            },
+            {
+                category: 'physics',
+                imageUrl: 'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=800', // Space/Lightning
+                translations: {
+                    fr: { word: "Plasma", definition: "Le quatrième état de la matière, constitué de gaz très chaud dont les atomes sont ionisés." },
+                    en: { word: "Plasma", definition: "An ionized gas consisting of positive ions and free electrons (e.g., in stars or lightning)." },
+                    ar: { word: "بلازما", definition: "الحالة الرابعة للمادة، وهي غاز متأين شديد الحرارة." },
+                    zgh: { word: "ⴱⵍⴰⵣⵎⴰ", definition: "ⴰⵏⴰⵡ ⵡⵉⵙ ⴽⴽⵓⵥ ⵏ ⵜⵎⵜⵜⴰ, ⵉⴳⴰ ⴰⴳⴰⵣ ⵉⵔⵖⴰⵏ ⴱⴰⵀⵔⴰ." }
+                },
+                status: 'approved'
+            }
+        ];
+
+        const log = (msg) => {
+            const entry = document.createElement('div');
+            entry.textContent = msg;
+            document.getElementById('status').appendChild(entry);
+        };
+
+        document.getElementById('addBtn').onclick = async () => {
+            document.getElementById('addBtn').disabled = true;
+            log("🚀 Lancement de l'ajout...");
+            for (const word of pcWords) {
+                try {
+                    await addDoc(collection(db, "words"), {
+                        ...word,
+                        author: "system@smartdictionary.edu",
+                        createdAt: new Date().toISOString()
+                    });
+                    log("✅ Ajouté : " + word.translations.fr.word);
+                } catch (e) {
+                    log("❌ Erreur pour " + word.translations.fr.word + " : " + e.message);
+                }
+            }
+            log("🎉 Terminé ! Les 10 mots sont dans votre dictionnaire.");
+        };
+    </script>
+</body>
+</html>

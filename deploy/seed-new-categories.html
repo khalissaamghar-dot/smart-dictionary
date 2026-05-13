@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Seed New Categories</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; text-align: center; background: #f8fafc; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: inline-block; }
+        button { background: #3b82f6; color: white; border: none; padding: 15px 30px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        #log { margin-top: 20px; text-align: left; font-family: monospace; background: #1e293b; color: #38bdf8; padding: 20px; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Smart Data Seeder v2</h1>
+        <p>Adds unique scientific terms with images (Fauna, Flora, Plants, Biology, etc.).</p>
+        <p style="font-size:0.8rem;color:#64748b;">Automatically skips words that already exist in the database.</p>
+        <button id="runBtn">Add Unique Terms</button>
+        <button id="updateImgBtn" style="background: #10b981; margin-top: 10px;">Update Missing Images</button>
+        <div id="log">Ready to process...</div>
+    </div>
+
+    <script type="module">
+        import { seedNewData } from './js/seed_new_data.js';
+        import { updateMissingImages } from './js/update_missing_images.js';
+        const log = document.getElementById('log');
+        
+        document.getElementById('runBtn').onclick = async () => {
+            log.innerHTML = "Seeding started...<br>";
+            const oldLog = console.log;
+            console.log = (m) => { log.innerHTML += m + "<br>"; oldLog(m); };
+            await seedNewData();
+            log.innerHTML += "<b>Seeding Done!</b>";
+        };
+
+        document.getElementById('updateImgBtn').onclick = async () => {
+            log.innerHTML = "Image update started...<br>";
+            const oldLog = console.log;
+            console.log = (m) => { log.innerHTML += m + "<br>"; oldLog(m); };
+            await updateMissingImages();
+            log.innerHTML += "<b>Image Update Done!</b>";
+        };
+    </script>
+</body>
+</html>

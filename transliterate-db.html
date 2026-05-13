@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Transliterate Database to Tifinagh</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: white; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); max-width: 600px; width: 90%; border: 1px solid #334155; text-align: center; }
+        h1 { color: #38bdf8; margin-bottom: 10px; }
+        p { color: #94a3b8; line-height: 1.6; }
+        button { background: #3b82f6; color: white; border: none; padding: 14px 28px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: 20px; }
+        button:hover { background: #2563eb; transform: translateY(-2px); }
+        button:disabled { background: #475569; cursor: not-allowed; }
+        #log { margin-top: 30px; text-align: left; background: #0f172a; padding: 20px; border-radius: 12px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; border: 1px solid #334155; color: #10b981; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>ⵣ ⵜⵉⴼⵉⵏⴰⵖ Transliteration</h1>
+        <p>Ce script va parcourir tous les mots de votre base de données Firebase et convertir les textes Amazigh (latin) en script <b>Tifinagh</b>.</p>
+        <button id="runBtn">Démarrer la conversion</button>
+        <div id="log">En attente...</div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, updateDoc, doc } from "./js/firebase-config.js";
+
+        const map = {
+            'a': 'ⴰ', 'b': 'ⴱ', 'c': 'ⵛ', 'd': 'ⴷ', 'ḍ': 'ⴹ',
+            'e': 'ⴻ', 'f': 'ⴼ', 'g': 'ⴳ', 'h': 'ⵀ', 'ḥ': 'ⵃ',
+            'i': 'ⵉ', 'j': 'ⵊ', 'k': 'ⴽ', 'l': 'ⵍ', 'm': 'ⵎ',
+            'n': 'ⵏ', 'q': 'ⵇ', 'o': 'ⵓ', 'p': 'ⵒ', 'r': 'ⵔ',
+            'ṛ': 'ⵕ', 's': 'ⵙ', 'ṣ': 'ⵚ', 't': 'ⵜ', 'ṭ': 'ⵟ',
+            'u': 'ⵓ', 'w': 'ⵡ', 'x': 'ⵅ', 'y': 'ⵢ', 'z': 'ⵣ',
+            'ẓ': 'ⵥ', 'ɣ': 'ⵖ', 'ɛ': 'ⵄ', 'ʷ': 'ⵯ',
+            'A': 'ⴰ', 'B': 'ⴱ', 'C': 'ⵛ', 'D': 'ⴷ', 'Ḍ': 'ⴹ',
+            'E': 'ⴻ', 'F': 'ⴼ', 'G': 'ⴳ', 'H': 'ⵀ', 'Ḥ': 'ⵃ',
+            'I': 'ⵉ', 'J': 'ⵊ', 'K': 'ⴽ', 'L': 'ⵍ', 'M': 'ⵎ',
+            'N': 'ⵏ', 'Q': 'ⵇ', 'O': 'ⵓ', 'P': 'ⵒ', 'R': 'ⵔ',
+            'Ṛ': 'ⵕ', 'S': 'ⵙ', 'Ṣ': 'ⵚ', 'T': 'ⵜ', 'Ṭ': 'ⵟ',
+            'U': 'ⵓ', 'W': 'ⵡ', 'X': 'ⵅ', 'Y': 'ⵢ', 'Z': 'ⵣ',
+            'Ẓ': 'ⵥ', 'Ɣ': 'ⵖ', 'Ɛ': 'ⵄ'
+        };
+
+        function transliterate(text) {
+            if (!text) return '';
+            let res = '';
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                res += map[char] || char;
+            }
+            return res;
+        }
+
+        const logEl = document.getElementById('log');
+        const addLog = (msg, isError = false) => {
+            const div = document.createElement('div');
+            if (isError) div.className = 'error';
+            div.textContent = `> ${msg}`;
+            logEl.appendChild(div);
+            logEl.scrollTop = logEl.scrollHeight;
+        };
+
+        document.getElementById('runBtn').onclick = async () => {
+            document.getElementById('runBtn').disabled = true;
+            addLog("Récupération des mots...");
+
+            try {
+                const snapshot = await getDocs(collection(db, "words"));
+                addLog(`Trouvé ${snapshot.size} mots.`);
+
+                let count = 0;
+                for (const d of snapshot.docs) {
+                    const data = d.data();
+                    if (data.translations && data.translations.zgh) {
+                        const zgh = data.translations.zgh;
+                        
+                        // Check if it's actually Latin (very basic check: has a-z)
+                        const hasLatin = /[a-zA-Z]/.test(zgh.word) || /[a-zA-Z]/.test(zgh.definition);
+                        
+                        if (hasLatin) {
+                            const newZgh = {
+                                word: transliterate(zgh.word),
+                                definition: transliterate(zgh.definition)
+                            };
+                            
+                            await updateDoc(doc(db, "words", d.id), {
+                                "translations.zgh": newZgh
+                            });
+                            addLog(`Mis à jour: ${data.translations.en.word} -> ${newZgh.word}`);
+                            count++;
+                        }
+                    }
+                }
+                addLog(`✅ Terminé ! ${count} mots ont été convertis en Tifinagh.`);
+            } catch (err) {
+                addLog(`Erreur: ${err.message}`, true);
+                console.error(err);
+            }
+            document.getElementById('runBtn').disabled = false;
+        };
+    </script>
+</body>
+</html>

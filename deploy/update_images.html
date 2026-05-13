@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mettre à jour les images</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #0f172a; color: white; text-align: center; }
+        button { background: #10b981; color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; font-size: 1.2rem; font-weight: bold; }
+        #log { margin-top: 30px; text-align: left; background: #1e293b; padding: 20px; border-radius: 10px; max-width: 600px; margin-left: auto; margin-right: auto; min-height: 200px; white-space: pre-wrap; font-family: monospace;}
+    </style>
+</head>
+<body>
+    <h1>Mise à jour des images du dictionnaire</h1>
+    <p>Ce script va associer les nouvelles images du dossier <code>img/</code> aux mots correspondants dans la base de données Firebase.</p>
+    <button id="runBtn">Lancer la mise à jour</button>
+    <div id="log">En attente...</div>
+
+    <script type="module">
+        import { updateMissingImages } from "./js/update_missing_images.js";
+
+        document.getElementById('runBtn').onclick = async () => {
+            const logDiv = document.getElementById('log');
+            logDiv.textContent = "⏳ Mise à jour en cours...\n";
+            
+            // Redirect console.log to our div
+            const oldLog = console.log;
+            const oldError = console.error;
+            console.log = function(...args) {
+                logDiv.textContent += args.join(' ') + '\n';
+                oldLog.apply(console, args);
+            };
+            console.error = function(...args) {
+                logDiv.textContent += '❌ ' + args.join(' ') + '\n';
+                oldError.apply(console, args);
+            };
+
+            try {
+                await updateMissingImages();
+                logDiv.textContent += "\n✅ Terminé avec succès !";
+            } catch (err) {
+                logDiv.textContent += "\n❌ Erreur : " + err.message;
+            }
+
+            // Restore console
+            console.log = oldLog;
+            console.error = oldError;
+        };
+    </script>
+</body>
+</html>

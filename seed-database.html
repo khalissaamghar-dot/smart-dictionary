@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Database Seeder</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            padding: 20px;
+            line-height: 1.5;
+            background: #f4f4f9;
+        }
+
+        .log {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        .status-card {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ffeeba;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Smart Dictionary Database Seeder</h1>
+    <p>This script will add <b>30+</b> high-quality scientific words to your Firestore database.</p>
+
+    <div class="status-card">
+        <strong>⚠️ Security Required:</strong> Ensure your Firestore Rules allow writes to the <code>words</code>
+        collection.
+        <br>
+        <em>rules_version = '2'; service cloud.firestore { match /databases/{database}/documents { match /words/{w} {
+            allow read, write: if true; } } }</em>
+    </div>
+
+    <button id="seedBtn">Start Seeding Database</button>
+    <div id="log" class="log" style="margin-top:20px;">Ready...</div>
+
+    <script type="module">
+        import { db, collection, addDoc, serverTimestamp } from "./js/firebase-config.js";
+        import { dictionaryData } from "./js/data.js";
+
+        const logEl = document.getElementById('log');
+        const btn = document.getElementById('seedBtn');
+
+        const log = (msg) => {
+            logEl.innerHTML += `> ${msg}<br>`;
+            logEl.scrollTop = logEl.scrollHeight;
+        };
+
+        btn.onclick = async () => {
+            btn.disabled = true;
+            log("Starting database seed process...");
+            log(`Found ${dictionaryData.length} terms to upload.`);
+
+            for (const word of dictionaryData) {
+                try {
+                    // Skip pending ones or author check if needed, but here we want to seed all system ones
+                    log(`Adding: ${word.translations.en.word}...`);
+
+                    // Cleanup id before sending to firestore if it was local-only pattern
+                    const { id, ...fireStoreDoc } = word;
+
+                    await addDoc(collection(db, "words"), {
+                        ...fireStoreDoc,
+                        createdAt: serverTimestamp()
+                    });
+                    log(`<span style="color: #4ade80">✓ Success</span>`);
+                } catch (e) {
+                    log(`<span style="color: #f87171">✗ Error: ${e.message}</span>`);
+                }
+            }
+
+            log("--- SEEDING COMPLETE ---");
+            log("You can now close this page and check the dictionary.");
+            btn.innerText = "Done!";
+        };
+    </script>
+</body>
+
+</html>

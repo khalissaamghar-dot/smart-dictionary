@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des Mots du Dictionnaire</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: white; padding: 40px; margin: 0; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: #38bdf8; text-align: center; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #334155; color: #38bdf8; font-weight: bold; }
+        tr:hover { background: #2d3b4f; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+        .status-approved { background: #10b981; color: white; }
+        .status-pending { background: #f59e0b; color: white; }
+        img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; background: #0f172a; }
+        #loading { text-align: center; font-size: 1.2rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Inventaire du Dictionnaire</h1>
+        <div id="loading">Chargement des données Firebase...</div>
+        <table id="wordTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Mot (FR)</th>
+                    <th>Mot (EN)</th>
+                    <th>Catégorie</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody id="wordList"></tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs } from "./js/firebase-config.js";
+
+        async function fetchWords() {
+            try {
+                const snapshot = await getDocs(collection(db, "words"));
+                const wordList = document.getElementById('wordList');
+                const loading = document.getElementById('loading');
+                const table = document.getElementById('wordTable');
+
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    const fr = data.translations?.fr?.word || "---";
+                    const en = data.translations?.en?.word || "---";
+                    const img = data.imageUrl || "";
+                    const status = data.status || "pending";
+                    const cat = data.category || "General";
+
+                    const row = `
+                        <tr>
+                            <td><img src="${img}" alt="${fr}" onerror="this.src='https://via.placeholder.com/50?text=?'"></td>
+                            <td><b>${fr}</b></td>
+                            <td>${en}</td>
+                            <td>${cat}</td>
+                            <td><span class="badge status-${status}">${status}</span></td>
+                        </tr>
+                    `;
+                    wordList.innerHTML += row;
+                });
+
+                loading.style.display = 'none';
+                table.style.display = 'table';
+            } catch (e) {
+                document.getElementById('loading').innerHTML = "❌ Erreur : " + e.message;
+            }
+        }
+
+        fetchWords();
+    </script>
+</body>
+</html>

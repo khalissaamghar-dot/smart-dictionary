@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update Missing Images</title>
+</head>
+<body>
+    <h1>Updating Missing Images...</h1>
+    <div id="log" style="white-space: pre-wrap; font-family: monospace;"></div>
+    <script type="module">
+        import { updateMissingImages } from "./js/update_missing_images.js?v=999";
+        
+        const log = document.getElementById('log');
+        const oldLog = console.log;
+        const oldError = console.error;
+        
+        console.log = function(...args) {
+            oldLog(...args);
+            log.textContent += args.join(' ') + '\n';
+        };
+        console.error = function(...args) {
+            oldError(...args);
+            log.textContent += 'ERROR: ' + args.join(' ') + '\n';
+        };
+
+        async function run() {
+            try {
+                console.log("Starting script...");
+                await updateMissingImages();
+                console.log("Done!");
+            } catch (e) {
+                console.error(e.message);
+            }
+        }
+        run();
+    </script>
+</body>
+</html>

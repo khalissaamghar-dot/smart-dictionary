@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Réparateur de Photosynthèse</title>
+    <style>
+        body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f0f2f5; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
+        button { background: #3b82f6; color: white; border: none; padding: 15px 30px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: background 0.2s; }
+        button:hover { background: #2563eb; }
+        #status { margin-top: 20px; font-size: 0.9rem; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🛠️ Mise à jour Photosynthèse</h1>
+        <p>Cliquez sur le bouton ci-dessous pour lier le GIF <b>img/photoSynthese.gif</b> au mot Photosynthèse dans votre base de données.</p>
+        <button id="fixBtn">Mettre à jour maintenant</button>
+        <div id="status">En attente...</div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, updateDoc, doc } from "./js/firebase-config.js";
+
+        document.getElementById('fixBtn').onclick = async () => {
+            const status = document.getElementById('status');
+            status.innerHTML = "⏳ Recherche en cours...";
+            
+            try {
+                const wordsRef = collection(db, "words");
+                const snapshot = await getDocs(wordsRef);
+                let found = false;
+
+                for (const d of snapshot.docs) {
+                    const data = d.data();
+                    const wordEn = data.translations?.en?.word?.toLowerCase();
+                    const wordFr = data.translations?.fr?.word?.toLowerCase();
+
+                    if (wordEn === 'photosynthesis' || wordFr === 'photosynthèse') {
+                        await updateDoc(doc(db, "words", d.id), {
+                            imageUrl: 'img/photoSynthese.gif'
+                        });
+                        status.innerHTML = "✅ <b>Succès !</b> La base de données a été mise à jour.<br>Vous pouvez fermer cette page et retourner sur le dictionnaire.";
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) status.innerHTML = "❌ Mot 'Photosynthesis' non trouvé dans la base.";
+            } catch (e) {
+                status.innerHTML = "❌ Erreur : " + e.message;
+                console.error(e);
+            }
+        };
+    </script>
+</body>
+</html>
