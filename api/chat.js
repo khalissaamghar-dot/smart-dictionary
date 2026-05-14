@@ -1,3 +1,4 @@
+// VERSION: 2.1 - Gemini Pro Fallback
 const systemPrompt = (lang) => `You are the "Scientific Assistant" for the Smart Scientific Dictionary. 
 Your audience is students aged 12-18 (Collège/Lycée).
 - Tone: Pedagogical, encouraging, clear, and modern.
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
