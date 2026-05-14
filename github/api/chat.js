@@ -24,42 +24,49 @@ export default async function handler(req, res) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     if (!GEMINI_API_KEY) {
-        return res.status(500).json({ reply: "Configuration error: API Key missing on server." });
+        return res.status(500).json({ reply: "Configuration error: API Key missing on server. Please check Vercel environment variables." });
     }
 
     // List of models to try in order of preference
-    const models = ['gemini-1.5-flash', 'gemini-pro'];
-    let lastError = "Unknown error";
+    const models = ['gemini-1.5-flash', 'gemini-1.5-pro'];
+    let lastError = "No response from AI models.";
     
     for (const modelName of models) {
         try {
-            // Try both v1 and v1beta
-            const apiVersions = ['v1', 'v1beta'];
-            for (const version of apiVersions) {
-                const response = await fetch(`https://generativelanguage.googleapis.com/${version}/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: systemPrompt(lang) + "\n\nStudent asks: " + message }] }]
-                    })
-                });
+            console.log(`Attempting chat with model: ${modelName}`);
+            const apiVersion = modelName.includes('1.5') ? 'v1' : 'v1beta';
+            const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: systemPrompt(lang) + "\n\nStudent asks: " + message }] }]
+                })
+            });
 
-                const data = await response.json();
+            const data = await response.json();
 
-                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                    return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
-                }
-                
-                if (data.error) {
-                    lastError = `${modelName} (${version}): ${data.error.message}`;
-                    continue; 
-                }
+            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
             }
+            
+            if (data.error) {
+                lastError = `Model ${modelName} error: ${data.error.message} (${data.error.status})`;
+                console.warn(lastError);
+                continue; 
+            }
+            
+            lastError = `Model ${modelName} returned an unexpected response format.`;
         } catch (err) {
-            lastError = err.message;
+            lastError = `Fetch error with model ${modelName}: ${err.message}`;
+            console.error(lastError);
             continue;
         }
     }
 
-    return res.status(500).json({ reply: `Désolé, l'IA est indisponible. Détail technique : ${lastError}` });
+    return res.status(500).json({ 
+        reply: `The scientific assistant is currently unavailable. Technical details: ${lastError}`,
+        suggestion: "Please verify that your Gemini API key is valid and has access to the 1.5 Flash/Pro models."
+    });
 }
