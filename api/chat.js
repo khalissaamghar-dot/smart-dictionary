@@ -1,4 +1,3 @@
-// VERSION: 2.1 - Gemini Pro Fallback
 const systemPrompt = (lang) => `You are the "Scientific Assistant" for the Smart Scientific Dictionary. 
 Your audience is students aged 12-18 (Collège/Lycée).
 - Tone: Pedagogical, encouraging, clear, and modern.
@@ -14,55 +13,49 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader(
-        'Access-Control-Allow-Headers',
-        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-    );
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
     }
 
-    if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Method Not Allowed' });
-    }
-
-    const { message, lang } = req.body;
+    const { message, lang = 'fr' } = req.body;
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     if (!GEMINI_API_KEY) {
         return res.status(500).json({ reply: "Configuration error: API Key missing on server." });
     }
 
-    try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: systemPrompt(lang) + "\n\nStudent asks: " + message }] }]
-            })
-        });
+    // List of models to try in order of preference
+    const models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+    
+    for (const modelName of models) {
+        try {
+            console.log(`Attempting chat with model: ${modelName}`);
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: systemPrompt(lang) + "\n\nStudent asks: " + message }] }]
+                })
+            });
 
-        const data = await response.json();
-        
-        if (data.error) {
-            console.error("Gemini API Error details:", data.error);
-            // Fallback to gemini-pro if flash is not available
-            if (data.error.message.includes('not found') || data.error.message.includes('not supported')) {
-                return res.status(500).json({ reply: "AI Model not found. Attempting to use fallback..." });
+            const data = await response.json();
+
+            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
             }
-            return res.status(500).json({ reply: "AI Service Error: " + data.error.message });
+            
+            if (data.error) {
+                console.warn(`Model ${modelName} failed:`, data.error.message);
+                continue; // Try next model
+            }
+        } catch (err) {
+            console.error(`Error with model ${modelName}:`, err);
+            continue;
         }
-
-        if (!data.candidates || !data.candidates[0]) {
-            return res.status(500).json({ reply: "AI Service returned no results." });
-        }
-
-        const aiReply = data.candidates[0].content.parts[0].text;
-        res.status(200).json({ reply: aiReply });
-    } catch (err) {
-        console.error("Vercel Function Error:", err);
-        res.status(500).json({ reply: "Connection error to AI service." });
     }
+
+    return res.status(500).json({ reply: "All AI models are currently unavailable. Please try again in a few minutes." });
 }
